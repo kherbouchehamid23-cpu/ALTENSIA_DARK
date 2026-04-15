@@ -1,113 +1,116 @@
-// ALTENSIA — main.js v2 Premium
+/**
+ * ALTENSIA - Logique de l'application (main.js)
+ */
 
-const order = ['accueil','parcours','offres','engagements','contact'];
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // --- NAVIGATION ---
+    const navItems = document.querySelectorAll('.nav-item');
+    const pages = document.querySelectorAll('.page');
+    const btnNavs = document.querySelectorAll('.btn-nav');
 
-const pageLabels = {
-  accueil:     'Vue d\'ensemble',
-  parcours:    'Methodologie',
-  offres:      'Propositions de valeur',
-  engagements: 'Principes directeurs',
-  contact:     'Prise de contact'
-};
+    function showPage(targetId) {
+        pages.forEach(p => p.classList.remove('active'));
+        navItems.forEach(n => {
+            n.classList.remove('active');
+            if(n.getAttribute('data-target') === targetId) n.classList.add('active');
+        });
 
-function updateBreadcrumb(id) {
-  const el = document.getElementById('breadcrumb-page');
-  if (el) el.textContent = pageLabels[id] || id;
-}
-
-function goTo(id, el) {
-  const current = document.querySelector('.page.active');
-  if (current && current.id === 'page-' + id) return;
-
-  // Exit animation on current page
-  if (current) {
-    current.classList.add('exit');
-    setTimeout(() => {
-      current.classList.remove('active', 'exit');
-    }, 180);
-  }
-
-  // Update nav
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (el && el.classList && el.classList.contains('nav-item')) {
-    el.classList.add('active');
-  } else {
-    const idx = order.indexOf(id);
-    const items = document.querySelectorAll('.sidebar .nav-item');
-    if (idx >= 0 && items[idx]) items[idx].classList.add('active');
-  }
-
-  // Show new page with delay for exit animation
-  setTimeout(() => {
-    const pg = document.getElementById('page-' + id);
-    if (pg) {
-      pg.classList.add('active');
-      document.querySelector('.content').scrollTo({ top: 0, behavior: 'smooth' });
+        const targetPage = document.getElementById('page-' + targetId);
+        if(targetPage) targetPage.classList.add('active');
+        
+        // Scroll en haut de la zone main
+        document.querySelector('.main').scrollTo(0, 0);
     }
-    updateBreadcrumb(id);
-  }, current ? 160 : 0);
-}
 
-// Mobile menu
-function toggleMobileMenu() {
-  document.getElementById('mobile-menu').classList.toggle('open');
-}
-function closeMobileMenu() {
-  document.getElementById('mobile-menu').classList.remove('open');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+    navItems.forEach(item => {
+        item.addEventListener('click', () => showPage(item.getAttribute('data-target')));
+    });
 
-// Topbar clock
-function updateClock() {
-  const el = document.getElementById('topbar-time');
-  if (!el) return;
-  const now = new Date();
-  el.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
-updateClock();
-setInterval(updateClock, 60000);
+    btnNavs.forEach(btn => {
+        btn.addEventListener('click', () => showPage(btn.getAttribute('data-target')));
+    });
 
-// Contact form — Formspree
-const FORMSPREE = "https://formspree.io/f/xeevqken";
-const form = document.getElementById("contact-form");
-const statusEl = document.getElementById("form-status");
+    document.getElementById('logo-home').addEventListener('click', () => showPage('accueil'));
 
-if (form) {
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    statusEl.textContent = "";
-    statusEl.className = "form-status";
-    const fd = new FormData(form);
-    if (fd.get("website")) {
-      statusEl.textContent = "Message transmis.";
-      statusEl.classList.add("success");
-      form.reset();
-      return;
+
+    // --- DIAGNOSTIC IA ---
+    let currentStep = 0;
+    let score = 0;
+    const totalSteps = 1; // Simplifié pour cet exemple, augmentez selon vos questions
+
+    const startBtn = document.getElementById('start-diag');
+    const pBar = document.getElementById('p-bar');
+
+    if(startBtn) {
+        startBtn.addEventListener('click', () => {
+            document.getElementById('s-0').classList.remove('active');
+            document.getElementById('s-1').classList.add('active');
+            pBar.style.width = '50%';
+        });
     }
-    const name = String(fd.get("name") || "").trim();
-    const email = String(fd.get("email") || "").trim();
-    const organization = String(fd.get("organization") || "").trim();
-    const message = String(fd.get("message") || "").trim();
-    if (!name || !email || !message) {
-      statusEl.textContent = "Veuillez renseigner les champs requis.";
-      statusEl.classList.add("error");
-      return;
+
+    const optionBtns = document.querySelectorAll('.option-btn');
+    optionBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            score = parseInt(btn.getAttribute('data-pts'));
+            showResults();
+        });
+    });
+
+    function showResults() {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('s-res').classList.add('active');
+        pBar.style.width = '100%';
+        
+        const fScore = document.getElementById('f-score');
+        const fTitle = document.getElementById('f-title');
+        
+        fScore.textContent = (score * 5) + "%"; // Calcul factice
+        fTitle.textContent = score > 10 ? "Profil Avancé" : "Opportunité Majeure";
     }
-    try {
-      statusEl.textContent = "Transmission en cours...";
-      const res = await fetch(FORMSPREE, {
-        method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, organization, message })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.errors?.[0]?.message || "Echec de la transmission.");
-      statusEl.textContent = "Votre demande a bien ete transmise. Nous revenons vers vous sous 24h.";
-      statusEl.classList.add("success");
-      form.reset();
-    } catch (err) {
-      statusEl.textContent = err.message || "Une erreur est survenue.";
-      statusEl.classList.add("error");
+
+    document.getElementById('get-plan').addEventListener('click', () => {
+        const msg = document.getElementById('msg-field');
+        msg.value = "J'ai réalisé le diagnostic IA (Score: " + document.getElementById('f-score').textContent + "). Je souhaite recevoir mon plan d'action.";
+        showPage('contact');
+    });
+
+
+    // --- FORMULAIRE CONTACT ---
+    const contactForm = document.getElementById('contact-form');
+    if(contactForm) {
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = contactForm.querySelector('button');
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.textContent = "Envoi...";
+
+            const formData = new FormData(contactForm);
+            
+            try {
+                const response = await fetch(contactForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if(response.ok) {
+                    btn.textContent = "Merci !";
+                    contactForm.reset();
+                } else {
+                    btn.textContent = "Erreur";
+                }
+            } catch (err) {
+                btn.textContent = "Erreur réseau";
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }, 3000);
+            }
+        });
     }
-  });
-}
+});
